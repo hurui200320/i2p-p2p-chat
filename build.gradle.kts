@@ -3,13 +3,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.7.21"
     kotlin("plugin.serialization") version "1.7.21"
+    `maven-publish`
 }
 
-group = "info.skyblond.i2p"
-version = "0.0.1"
-
-java.sourceCompatibility = JavaVersion.VERSION_1_8
-java.targetCompatibility = JavaVersion.VERSION_1_8
+group = "info.skyblond"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
@@ -37,4 +35,51 @@ tasks.test {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+}
+
+val jarSources by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from(sourceSets.main.map { it.allSource })
+}
+
+val jarJavadoc by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("dist") {
+            from(components["java"])
+            artifact(jarSources)
+            artifact(jarJavadoc)
+
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+
+            pom {
+                name.set("${project.group}:${project.name}")
+                description.set("A kotlin library for P2P chat over I2P network.")
+                url.set("https://github.com/hurui200320/i2p-p2p-chat")
+                licenses {
+                    license {
+                        name.set("GNU Affero General Public License v3.0")
+                        url.set("https://www.gnu.org/licenses/agpl-3.0.txt")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/hurui200320/i2p-p2p-chat")
+                    connection.set("scm:git:https://github.com/hurui200320/i2p-p2p-chat.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/hurui200320/i2p-p2p-chat.git")
+                }
+                developers {
+                    developer {
+                        id.set("hurui200320")
+                        name.set("SkyBlond")
+                        email.set("maven@skyblond.info")
+                    }
+                }
+            }
+        }
+    }
 }
