@@ -8,11 +8,50 @@ import mu.KLogger
 import net.i2p.data.DataFormatException
 import net.i2p.data.Destination
 import java.util.*
+import java.util.concurrent.ThreadPoolExecutor
+
+/**
+ * Create [MessagePayloadHandler] using lambda.
+ * */
+inline fun <C : SessionContext, reified T : MessagePayload> createMessageHandlerWithReply(
+    crossinline block: (
+        peer: Peer<C>, session: PeerSession<C>,
+        messageId: UUID, payload: T,
+        threadPool: ThreadPoolExecutor
+    ) -> MessagePayload
+): MessagePayloadHandler<C, T> =
+    object : MessagePayloadHandler<C, T>(T::class) {
+        override fun handleTyped(
+            peer: Peer<C>, session: PeerSession<C>,
+            messageId: UUID, payload: T,
+            threadPool: ThreadPoolExecutor
+        ): MessagePayload = block(peer, session, messageId, payload, threadPool)
+    }
+
+inline fun <C : SessionContext, reified T : MessagePayload> createMessageHandlerNoReply(
+    crossinline block: (
+        peer: Peer<C>, session: PeerSession<C>, payload: T,
+        threadPool: ThreadPoolExecutor
+    ) -> Unit
+): MessagePayloadHandler<C, T> =
+    object : MessagePayloadHandler<C, T>(T::class) {
+        override fun handleTyped(
+            peer: Peer<C>, session: PeerSession<C>,
+            messageId: UUID, payload: T,
+            threadPool: ThreadPoolExecutor
+        ): MessagePayload? = block(peer, session, payload, threadPool).let { null }
+    }
+
+/**
+ * A handler that do nothing on [NoContentReply].
+ * */
+fun <C : SessionContext> createNoContentReplyHandler(): MessagePayloadHandler<C, NoContentReply> =
+    createMessageHandlerNoReply { _, _, _, _ -> }
 
 private fun <ContextType : SessionContext> Peer<ContextType>.handlePEX(
     session: PeerSession<ContextType>, peerInfos: List<PeerInfo>, logger: KLogger,
     filter: (PeerInfo) -> Boolean,
-    onException: (Throwable, PeerInfo) -> Unit,
+    onException: (Throwable, PeerInfo) -> Unit
 ) {
     var count = 0
     peerInfos
@@ -20,19 +59,19 @@ private fun <ContextType : SessionContext> Peer<ContextType>.handlePEX(
         .forEach { peerInfo ->
             val addr = peerInfo.info[PeerInfo.INFO_KEY_DEST] ?: return@forEach
             if (addr.endsWith(".b32.i2p")) {
-                this.addNewPeer(addr, { onException(it, peerInfo) })
+                this.addNewPeer(addr) { onException(it, peerInfo) }
                 count++
             } else {
                 try {
                     val dest = Destination(addr)
-                    this.addNewPeer(dest, { onException(it, peerInfo) })
+                    this.addNewPeer(dest) { onException(it, peerInfo) }
                     count++
                 } catch (e: DataFormatException) {
                     onException(e, peerInfo)
                 }
             }
         }
-    logger.info { "Collected $count peers from ${session.getDisplayName()}" }
+    logger.debug { "Got $count peers from ${session.getDisplayName()}" }
 }
 
 /**
@@ -47,15 +86,11 @@ fun <ContextType : SessionContext> createPEXRequestHandler(
     /**
      * Handle when things go wrong.
      * */
-    onException: (Throwable, PeerInfo) -> Unit = { t, p -> logger.warn(t) { "Failed to connect new peer $p" } },
+    onException: (Throwable, PeerInfo) -> Unit
 ): MessagePayloadHandler<ContextType, PEXRequest> =
-    object : MessagePayloadHandler<ContextType, PEXRequest>(PEXRequest::class) {
-        override fun handleTyped(
-            peer: Peer<ContextType>, session: PeerSession<ContextType>,
-            messageId: UUID, payload: PEXRequest
-        ): MessagePayload = PEXReply(messageId, peer.dumpKnownPeer()).also {
-            peer.handlePEX(session, payload.peerInfos, logger, filter, onException)
-        }
+    createMessageHandlerWithReply { peer, session, messageId, payload, threadPool ->
+        threadPool.execute { peer.handlePEX(session, payload.peerInfos, logger, filter, onException) }
+        PEXReply(messageId, peer.dumpKnownPeer())
     }
 
 /**
@@ -64,25 +99,8 @@ fun <ContextType : SessionContext> createPEXRequestHandler(
 fun <ContextType : SessionContext> createPEXReplyHandler(
     logger: KLogger,
     filter: (PeerInfo) -> Boolean,
-    onException: (Throwable, PeerInfo) -> Unit = { t, p -> logger.warn(t) { "Failed to connect new peer $p" } },
+    onException: (Throwable, PeerInfo) -> Unit
 ): MessagePayloadHandler<ContextType, PEXReply> =
-    object : MessagePayloadHandler<ContextType, PEXReply>(PEXReply::class) {
-        override fun handleTyped(
-            peer: Peer<ContextType>, session: PeerSession<ContextType>,
-            messageId: UUID, payload: PEXReply
-        ): MessagePayload = PEXReply(messageId, peer.dumpKnownPeer()).also {
-            peer.handlePEX(session, payload.peerInfos, logger, filter, onException)
-        }
+    createMessageHandlerNoReply { peer, session, payload, threadPool ->
+        threadPool.execute { peer.handlePEX(session, payload.peerInfos, logger, filter, onException) }
     }
-
-/**
- * A handler that do nothing on [NoContentReply].
- * */
-fun <ContextType : SessionContext> createNoContentReplyHandler(): MessagePayloadHandler<ContextType, NoContentReply> =
-    object : MessagePayloadHandler<ContextType, NoContentReply>(NoContentReply::class) {
-        override fun handleTyped(
-            peer: Peer<ContextType>, session: PeerSession<ContextType>,
-            messageId: UUID, payload: NoContentReply
-        ): MessagePayload? = null
-    }
-

@@ -35,10 +35,7 @@ data class PeerInfo(
      * */
     val publicKeyBase64: String
 ) {
-    fun getInfoBencodeBytes(): ByteArray {
-        val bencode = Bencode()
-        return bencode.encode(info)
-    }
+    fun getInfoBencodeBytes(): ByteArray = getDataForSign(this.info)
 
     fun getSignatureBytes(): ByteArray {
         return Base64.getDecoder().decode(signatureBase64)
@@ -53,6 +50,8 @@ data class PeerInfo(
          * The key for peer's destination.
          * */
         const val INFO_KEY_DEST = "peer.dest"
+
+        fun getDataForSign(info: Map<String, String>): ByteArray = Bencode().encode(info)
     }
 }
 

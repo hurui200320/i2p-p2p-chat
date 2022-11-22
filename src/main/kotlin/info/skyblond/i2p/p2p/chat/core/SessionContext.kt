@@ -28,6 +28,11 @@ interface SessionContext {
     fun isAuthed(): Boolean = peerInfo != null
 
     /**
+     * Called when peer returns [info.skyblond.i2p.p2p.chat.message.AuthAcceptedReply]
+     * */
+    fun onAuthAccepted()
+
+    /**
      * If accepted, we can send message to them.
      * */
     fun isAccepted(): Boolean

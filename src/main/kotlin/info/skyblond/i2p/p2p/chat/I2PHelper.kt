@@ -32,6 +32,7 @@ object I2PHelper {
     private fun warmupLogger() {
         if (I2PAppContext.getGlobalContext().logManager().currentFile() != "No log file created yet") {
             logger.warn { "I2P logger has been already warmed up" }
+            return
         }
         I2PAppContext.getGlobalContext().logManager().let { logManager ->
             logManager.getLog("Application").let {
@@ -47,6 +48,7 @@ object I2PHelper {
      * Generate a destination key. It can be used when creating socket manager.
      * @see [createSocketManager]
      * */
+    @JvmStatic
     fun generateDestinationKey(): ByteArray = ByteArrayOutputStream().use {
         I2PClientFactory.createClient().createDestination(
             it, SigType.EdDSA_SHA512_Ed25519
@@ -59,6 +61,7 @@ object I2PHelper {
      * The [destinationKey] will decide the server destination.
      * The [appName] is the tunnel name shown on i2p router dashboard.
      * */
+    @JvmStatic
     fun createSocketManager(destinationKey: ByteArray, appName: String? = null): I2PSocketManager {
         val props = Properties()
         if (appName != null) {
@@ -79,6 +82,7 @@ object I2PHelper {
      *
      * Use this when using I2P related resources
      * */
+    @JvmStatic
     fun runThread(name: String? = null, runnable: Runnable) = runThread(name, runnable::run)
 
     /**
@@ -86,6 +90,7 @@ object I2PHelper {
      *
      * Use this when using I2P related resources
      * */
+    @JvmStatic
     fun runThread(name: String? = null, task: () -> Unit) {
         val t = I2PAppThread {
             try {
@@ -103,6 +108,7 @@ object I2PHelper {
      * Build a new [ThreadPoolExecutor] with given [nThreads] parameter.
      * The threads are [I2PAppThread] and are daemon threads.
      * */
+    @JvmStatic
     fun createThreadPool(nThreads: Int): ThreadPoolExecutor =
         ThreadPoolExecutor(
             nThreads, nThreads,

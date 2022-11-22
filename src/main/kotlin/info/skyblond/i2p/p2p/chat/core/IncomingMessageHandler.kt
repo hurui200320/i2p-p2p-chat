@@ -54,13 +54,14 @@ abstract class MessagePayloadHandler<ContextType : SessionContext, PayloadType :
         messageId: UUID,
         payload: MessagePayload,
         threadPool: ThreadPoolExecutor
-    ): MessagePayload? = handleTyped(peer, session, messageId, cast(payload))
+    ): MessagePayload? = handleTyped(peer, session, messageId, cast(payload), threadPool)
 
     protected abstract fun handleTyped(
         peer: Peer<ContextType>,
         session: PeerSession<ContextType>,
         messageId: UUID,
-        payload: PayloadType
+        payload: PayloadType,
+        threadPool: ThreadPoolExecutor
     ): MessagePayload?
 }
 
@@ -152,6 +153,7 @@ class GeneralIncomingMessageHandler<ContextType : SessionContext>(
         // handle message
         var reply = handler.handle(peer, session, messageId, payload, threadPool)
         if (payload is RequestMessagePayload && reply == null) {
+            // make sure request always get reply
             reply = NoContentReply(messageId)
         }
         if (reply != null) {
@@ -171,7 +173,10 @@ class GeneralIncomingMessageHandler<ContextType : SessionContext>(
                     session.close("Authentication failed")
                 } else {
                     // auth ok
-                    session.useContextSync { peerInfo = payload.peerInfo }
+                    session.useContextSync {
+                        peerInfo = payload.peerInfo
+                        onAuthAccepted()
+                    }
                 }
             }
         }

@@ -24,7 +24,7 @@ object UUIDAsStringSerializer : KSerializer<UUID> {
 }
 
 /**
- * Treat [Map]<String, String> as bencode. *
+ * Treat [Map]<String, String> as bencode.
  * */
 object MapAsBencodeSerializer : KSerializer<Map<String, String>> {
     override val descriptor = PrimitiveSerialDescriptor("Map<String, *>", PrimitiveKind.STRING)

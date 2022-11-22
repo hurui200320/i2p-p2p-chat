@@ -7,16 +7,16 @@ plugins {
 }
 
 group = "info.skyblond"
-version = "0.0.3"
+version = "0.0.4"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // i2p things
-    implementation("net.i2p:i2p:1.9.1")
-    implementation("net.i2p.client:streaming:1.9.1")
+    // i2p things, expose. (Need work with streaming client, etc.)
+    api("net.i2p:i2p:1.9.1")
+    api("net.i2p.client:streaming:1.9.1")
     // bencode for BitTorrent things
     implementation("com.dampcake:bencode:1.4")
     // kotlinx for json
@@ -24,8 +24,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
     // logger
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.4")
-    implementation("ch.qos.logback:logback-classic:1.4.4")
 
+    testImplementation("ch.qos.logback:logback-classic:1.4.4")
     testImplementation(kotlin("test"))
 }
 

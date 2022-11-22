@@ -45,7 +45,6 @@ class PeerSession<ContextType : SessionContext>(
     fun getDisplayName(): String = getPeerDestination().toBase32()
         .let { b32 -> useContextSync { nickname }?.let { nickname -> "$nickname ($b32)" } ?: b32 }
 
-
     init {
         runThread {
             try {
@@ -170,8 +169,7 @@ class PeerSession<ContextType : SessionContext>(
                 // It won't hurt anything if the close failed.
                 // It might be already broken/closed.
             }
-            // here we run the close hook in another thread to prevent deadlock
-            runThread { onSocketClosed(this) }
+            onSocketClosed(this)
         }
     }
 
