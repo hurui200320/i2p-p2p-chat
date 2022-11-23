@@ -22,6 +22,8 @@ See [examples](https://github.com/hurui200320/i2p-p2p-chat/tree/master/src/test/
 on how to use this lib. It shows you how to create a peer, send message, handle
 incoming messages, and PEX (like the BitTorrent's PEX, which peers can exchange their known peers).
 
+## Some notes
+
 I'm too lazy to write a document, and there are plenty comments in the code. If there
 are something unclear, just open an issue, you don't need GitHub pro to open issues, LOL.
 
