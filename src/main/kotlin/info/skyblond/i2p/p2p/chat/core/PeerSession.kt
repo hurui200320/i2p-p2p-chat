@@ -85,14 +85,13 @@ class PeerSession<ContextType : SessionContext>(
     }
 
     /**
-     * Send message.
-     * @return true if sent without IO exception.
+     * Send message. Close socket if IO exception occurred.
      * */
-    private fun sendMessageInternal(message: P2PMessage): Boolean {
+    private fun sendMessage(message: P2PMessage) {
         synchronized(socket) {
             if (socket.isClosed) {
                 logger.warn { "Sending message to closed socket ${getDisplayName()}" }
-                return false
+                return
             }
             val jsonText = json.encodeToString(message)
             logger.debug { "Send to ${getDisplayName()}: $jsonText" }
@@ -104,18 +103,6 @@ class PeerSession<ContextType : SessionContext>(
                 output.flush()
             } catch (e: IOException) {
                 logger.warn { "Failed to write socket. Socket ${getDisplayName()} closed!" }
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
-     * Send message. Close socket if IO exception occurred.
-     * */
-    private fun sendMessage(message: P2PMessage) {
-        synchronized(socket) {
-            if (!sendMessageInternal(message)) {
                 // failed to send due to I/O errors
                 // then close the socket
                 close()
@@ -160,7 +147,7 @@ class PeerSession<ContextType : SessionContext>(
     fun close(reason: String?) {
         synchronized(socket) {
             if (socket.isClosed) return
-            reason?.let { sendMessageInternal(P2PMessage.createRequest(ByeRequest(it))) }
+            reason?.let { sendRequest(ByeRequest(it)) }
             try {
                 socket.close()
                 input.close()
